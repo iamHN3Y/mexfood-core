@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+data/
+*.csv
+
+package-lock.json
+
+CONTEXT.md
+API_CONTRACT.md

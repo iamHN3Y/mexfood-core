@@ -1,0 +1,34 @@
+{
+  "name": "mexfood-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Recomendador de comida mexicana — motor de reglas + integración Supabase/Gemini",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
+    "typecheck": "tsc --build --noEmit",
+    "typecheck:scripts": "tsc -p scripts --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "seed": "tsx scripts/seed-supabase.ts",
+    "seed:dry": "tsx scripts/seed-supabase.ts --dry-run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.103.3",
+    "@types/node": "^25.6.0",
+    "dotenv": "^17.4.2",
+    "prettier": "^3.8.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}
