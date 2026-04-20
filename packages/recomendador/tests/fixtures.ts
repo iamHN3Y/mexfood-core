@@ -1,4 +1,24 @@
-import type { Perfil, Variante } from "@core/types";
+import type { Perfil, Platillo, Variante } from "@core/types";
+
+export function platilloBase(overrides: Partial<Platillo> = {}): Platillo {
+  return {
+    id: "PL001",
+    nombre: "Taco al pastor",
+    categoria: "antojito",
+    subcategoria: "taco",
+    estadoTipico: "Ciudad de México",
+    regionTipica: "Centro",
+    descripcion: "Taco de cerdo adobado al estilo trompo.",
+    tipoEstructura: "tortilla_rellena",
+    personalizable: true,
+    nivelPicanteBase: "medio",
+    riesgoDigestivoBase: "medio",
+    notaCultural: "Clásico de CDMX.",
+    recomendacionTurista: "Pide con piña.",
+    activo: true,
+    ...overrides,
+  };
+}
 
 export function perfilBase(overrides: Partial<Perfil> = {}): Perfil {
   return {

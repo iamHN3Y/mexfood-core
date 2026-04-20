@@ -1,10 +1,10 @@
 # @core/recomendador
 
 Motor de reglas puro (sin I/O, sincrónico) que decide qué platillos son aptos
-para un perfil y —próximamente— les asigna un score.
+para un perfil, les asigna un score 0-100 y los ordena con un semáforo.
 
-**Estado actual (Día 2):** solo **hard filters** (bloqueos binarios). El
-scoring, soft filters y recomendación ordenada llegan en Día 3+.
+**Estado actual (Día 3):** hard filters + scoring + recomendación ordenada
+con diversificación y listas de "evitar". Feature-complete para el MVP.
 
 **Quién lo usa:** el front, cada vez que hay que mostrar recomendaciones o el
 detalle de un platillo.
@@ -13,50 +13,75 @@ detalle de un platillo.
 
 ---
 
-## API pública actual
+## API pública
 
 ```typescript
-import { aplicarHardFilters, cumpleDieta, dietaEfectiva } from "@core/recomendador";
+import {
+  aplicarHardFilters,
+  calcularMatchScore,
+  cumpleDieta,
+  dietaEfectiva,
+  etiquetaYColor,
+  PESOS,
+  recomendarPlatillos,
+  UMBRALES,
+} from "@core/recomendador";
+```
+
+### `recomendarPlatillos(perfil, catalogo, opciones?)`
+
+El punto de entrada principal. Evalúa todas las variantes del catálogo contra
+el perfil, las ordena por score y devuelve las mejores + una lista de
+"evitar".
+
+```typescript
+const resultado = recomendarPlatillos(perfil, catalogo, {
+  topN: 5, // default 5
+  diversificar: true, // default true — máx 1 variante por platilloId
+  incluirEvitar: true, // default true
+  maxEvitar: 5, // default 5
+});
+
+// resultado: {
+//   recomendados: Recomendacion[],   // aptos, ordenados score desc
+//   evitar: Recomendacion[],          // bloqueados por hard filters
+//   totalEvaluados: number,
+// }
+```
+
+### `calcularMatchScore(perfil, variante, platillo)`
+
+Devuelve una `Recomendacion` individual con score 0-100, etiqueta y color.
+Corre hard filters primero; si bloquea, devuelve `apto: false` con score 0.
+
+```typescript
+const r = calcularMatchScore(perfil, variante, platillo);
+// {
+//   varianteId, platilloId,
+//   score: 0-100,
+//   apto: boolean,
+//   etiqueta: "Muy recomendable" | "Compatible con precauciones" | "Con reservas" | "No recomendable",
+//   color: "verde" | "amarillo" | "naranja" | "rojo",
+//   razonesPositivas: string[],
+//   razonesNegativas: string[],
+//   advertencias: string[],
+//   razonBloqueo?: string,           // solo si apto === false
+// }
 ```
 
 ### `aplicarHardFilters(perfil, variante)`
 
-Evalúa una variante contra los bloqueos duros del perfil:
+Evalúa los bloqueos duros. Orden de evaluación (primera razón que bloquee es
+la que se reporta):
 
-```typescript
-interface ResultadoHardFilter {
-  apto: boolean;
-  razonBloqueo?: string; // solo si apto === false
-}
-
-aplicarHardFilters(perfil, variante);
-// { apto: true }
-// o: { apto: false, razonBloqueo: "Contiene cerdo" }
-```
-
-Orden de evaluación (primera razón que bloquee es la que se reporta):
-
-1. **Alergias** (`perfil.alergias` contra `variante.alergenos`,
-   normalizando acentos y case).
+1. **Alergias** (normaliza acentos y case).
 2. **Dieta** (vegano / vegetariano / pescetariano — ver precedencia abajo).
 3. **Restricciones médicas** (`sinGluten`, `sinLacteos`).
-4. **Evitación por preferencia/religión** (`evitaCerdo`, `evitaMariscos`,
-   `evitaAlcohol`).
+4. **Evitación** (`evitaCerdo`, `evitaMariscos`, `evitaAlcohol`).
 
 ### `dietaEfectiva(dieta)` y `cumpleDieta(dieta, variante)`
 
-Resuelven la precedencia entre los tres flags de dieta (que son
-independientes en el perfil, no mutuamente excluyentes):
-
-```typescript
-dietaEfectiva({ vegano: true, pescetariano: true, vegetariano: false });
-// → "vegano" (el más estricto siempre gana)
-
-dietaEfectiva({ vegano: false, pescetariano: true, vegetariano: true });
-// → "pescetariano" (permite pescado; contrato §1.2)
-```
-
-Reglas (según [API_CONTRACT.md §1.2](../../API_CONTRACT.md)):
+Resuelven la precedencia entre los tres flags de dieta:
 
 | vegano | pescetariano | vegetariano  | Efectiva       |
 | ------ | ------------ | ------------ | -------------- |
@@ -67,35 +92,65 @@ Reglas (según [API_CONTRACT.md §1.2](../../API_CONTRACT.md)):
 
 ---
 
+## Modelo de scoring
+
+Score parte en **100** y se ajusta con penalizaciones y bonos. Clamp final
+entre 0 y 100.
+
+### Pesos (`PESOS`, exportados por si quieres tunearlos)
+
+| Ajuste                                  | Delta          |
+| --------------------------------------- | -------------- |
+| Picante `bajo` vs `medio`               | −15            |
+| Picante `bajo` vs `alto`                | −30            |
+| Picante `medio` vs `alto`               | −15            |
+| Estómago sensible + riesgo `medio`      | −10            |
+| Estómago sensible + riesgo `alto`       | −25            |
+| Ingrediente a evitar (por coincidencia) | −10 (tope −30) |
+| Ingrediente favorito (por coincidencia) | +5 (tope +15)  |
+| Platillo típico de tu estado actual     | +10            |
+
+### Umbrales del semáforo (`UMBRALES`)
+
+| Score  | Color    | Etiqueta                    |
+| ------ | -------- | --------------------------- |
+| 80-100 | verde    | Muy recomendable            |
+| 60-79  | amarillo | Compatible con precauciones |
+| 40-59  | naranja  | Con reservas                |
+| 0-39   | rojo     | No recomendable             |
+
+---
+
 ## Decisiones de diseño no obvias
+
+### Diversificación
+
+Por defecto limitamos a 1 variante por `platilloId` en el top N — evita que
+un platillo con 4 variantes bien calificadas monopolice la pantalla. Si no
+hay suficientes platillos únicos para llenar el topN, se rellena con las
+variantes adicionales (sin quedarse corto).
 
 ### Pescetariano sin flag de "contiene carne roja"
 
 El CSV solo tiene `contiene_cerdo` y `contiene_mariscos`, no un flag genérico
-de carne. La aproximación para pescetariano:
+de carne. La aproximación:
 
 - Si `aptoVegetariano === true` → apto.
 - Si `contieneCerdo === true` → bloquea (cerdo es carne).
-- Si `contieneMariscos === true` → apto (asumimos que lo no-vegetariano es
-  mariscos).
+- Si `contieneMariscos === true` → apto.
 - Resto → bloquea asumiendo "tiene carne no identificada".
 
-Edge case que cae por las grietas: platillo con mariscos **y** carne roja
-(p.ej. mar y tierra). En nuestro dataset esos son raros. Si aparece uno, se
-pasaría por apto erróneamente.
-
-### Match de alergenos
+### Match de alergenos e ingredientes
 
 Normalizamos ambos lados (lowercase + strip acentos + trim) y hacemos match
-si alguna de las cadenas contiene a la otra. Así `"lácteos"` matchea
-`"lacteos"`, `"LACTEOS"`, y `"soya"` matchea `"salsa de soya"`.
-Strings vacíos o solo espacios en `perfil.alergias` se ignoran.
+bidireccional por substring. Así `"lácteos"` matchea `"lacteos"`, y `"soya"`
+matchea `"salsa de soya"`. Strings vacíos en arrays del perfil se ignoran.
 
 ### Razones en español
 
-Las `razonBloqueo` están hardcodeadas en español. El front las muestra tal
-cual o las pasa al LLM para traducir. No intentamos i18n acá — la capa de
-presentación es responsabilidad del front.
+Las `razonBloqueo`, `razonesPositivas` y `razonesNegativas` están
+hardcodeadas en español. El front las muestra tal cual o las pasa al LLM
+para traducir. La capa de presentación es responsabilidad del front.
 
 ---
 
@@ -105,20 +160,14 @@ presentación es responsabilidad del front.
 npm test -- --project @core/recomendador
 ```
 
-42 tests:
+83 tests:
 
 - `dieta.test.ts` (13): precedencia y combinaciones.
 - `hard-filters.test.ts` (29): alergias, dieta, restricciones, evitación,
-  prioridad de reporte, casos complejos realistas (ej. "musulmán estricto en
-  taco al pastor", "celíaco pescetariano en tacos de camarón").
+  prioridad de reporte, casos realistas.
+- `score.test.ts` (27): etiquetas/umbrales, picante, digestivo, ingredientes
+  evitar/favoritos con topes, bonus regional, clamp 0..100.
+- `recomendar.test.ts` (14): topN, ordenamiento, diversificación,
+  incluirEvitar, maxEvitar, huérfanos, catálogo vacío.
 
----
-
-## Qué falta (próximo)
-
-- `calcularMatchScore(perfil, variante, platillo): Recomendacion` —
-  soft filters + score 0-100 + etiqueta y color de semáforo.
-- `recomendarPlatillos(perfil, catalogo, opciones): ResultadoRecomendacion` —
-  ordena, diversifica, separa recomendados de "evitar".
-
-Firmas finales en [API_CONTRACT.md §3](../../API_CONTRACT.md).
+Firmas completas en [API_CONTRACT.md §3](../../API_CONTRACT.md).
