@@ -57,6 +57,16 @@ function construirAnalisis(textos: string[], perfil: Perfil, catalogo: Catalogo)
     }
 
     matcheados++;
+
+    if (!match.variante) {
+      itemsDetectados.push({
+        textoOriginal: texto,
+        matchPlatillo: match.platillo,
+        motivo: motivoSinVariante(match.platillo),
+      });
+      continue;
+    }
+
     const recomendacion = calcularMatchScore(perfil, match.variante, match.platillo);
     const motivo = armarMotivo(recomendacion);
 
@@ -70,6 +80,13 @@ function construirAnalisis(textos: string[], perfil: Perfil, catalogo: Catalogo)
   }
 
   return { itemsDetectados, confianzaOCR: calcularConfianza(textos.length, matcheados) };
+}
+
+function motivoSinVariante(platillo: { estadoTipico?: string; regionTipica?: string }): string {
+  const origen = platillo.estadoTipico ?? platillo.regionTipica;
+  return origen
+    ? `Típico de ${origen}. Sin info de ingredientes — pregunta antes de pedir.`
+    : "Encontrado en el catálogo. Sin info de ingredientes — pregunta antes de pedir.";
 }
 
 function armarMotivo(r: {

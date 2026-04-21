@@ -85,6 +85,37 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
 
 ---
 
+## Día 7 — 2026-04-21 · Validación del escáner con fotos reales
+
+- Nuevo `scripts/demo-menu.ts` + `npm run demo:menu -- <ruta-imagen>`:
+  lee una imagen local, la codifica base64, resuelve mimeType por extensión
+  (jpg/png/webp/heic), y corre `analizarMenu` contra el catálogo real.
+  Imprime por item: color semáforo, score, match al catálogo y motivo.
+- Validado contra 3 fotos reales de menús mexicanos en `pruebas/`.
+  Descubrimos dos bugs del matcher que reducían recall:
+  1. **Platillos sin variantes ignorados:** el matcher solo iteraba
+     `variantesPorPlatillo`, saltándose ~90% del catálogo (PL018+ no tienen
+     variantes). Fix: iterar `catalogo.platillos` directo; `MejorMatch.variante`
+     ahora es `Variante | null`.
+  2. **Umbral demasiado estricto para textos cortos:** `similitud` usaba
+     `hits / tokensCat.length`, así que "Al pastor" (1 token) vs
+     "taco al pastor" (2 tokens) daba 0.5 < 0.6 umbral. Fix: promedio
+     simétrico `(hits/tokensCat + hits/tokensDet) / 2`. Permite match
+     de textos cortos sin sobre-permitir (el promedio castiga cuando
+     el catálogo tiene muchos tokens no presentes en el detectado).
+- `analizar-menu.ts`: cuando el match es platillo sin variante, reportamos
+  el platillo con `motivo` derivado de `estadoTipico` ("Típico de Hidalgo.
+  Sin info de ingredientes — pregunta antes de pedir."), sin color/score.
+- Resultados en las 3 fotos: **41/66 items matcheados (62%)**, vs 31/66
+  (47%) antes del fix. Los no-match restantes son huecos reales del
+  catálogo (Menudo/Nachos estándalone ya matchean; Picaditas y algunos
+  descriptores bilingües largos como "Al Pastor Porkmeat W/ Pineapple"
+  no — son casos límite aceptables para el MVP).
+- 3 tests nuevos en matcher/analizar-menu (null variante, textos cortos,
+  motivo sin variante). **230 tests totales.**
+
+---
+
 ## Día 5 — 2026-04-21 · Gemini Flash Lite + demo end-to-end
 
 - Cambio de modelo por default de `gemini-2.5-flash` a `gemini-2.5-flash-lite`
@@ -108,7 +139,7 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
 
 - **Capa de lógica (parser, data, recomendador, llm):** feature-complete
   para el MVP del hackathon + feature avanzada (escáner de menús).
-- **Tests:** 227 pasando, cero dependencias externas en recomendador/llm,
+- **Tests:** 230 pasando, cero dependencias externas en recomendador/llm,
   mocks puros para data/parser.
 - **Infra:** Supabase con schema + seed + edge function LLM desplegada.
   El front ya puede consumir todo sin bloqueos (incluyendo escáner).
@@ -121,4 +152,5 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
   sin meterlos al pipeline por costo/flakiness de Gemini.
 - Caching en tabla `menus_escaneados` (hash de imagen → items detectados)
   para evitar re-OCR del mismo menú entre sesiones.
-- Smoke test del escáner con una foto real de un menú mexicano.
+- Agregar al catálogo los huecos detectados en el escaneo (Picaditas,
+  Nachos, Chicharrón de puerco, Cuerito).

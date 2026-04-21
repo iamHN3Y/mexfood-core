@@ -67,14 +67,28 @@ describe("encontrarMejorMatch", () => {
   it("encuentra match por nombre de platillo", () => {
     const m = encontrarMejorMatch("Tacos al pastor", cat);
     expect(m?.platillo.id).toBe("P1");
-    expect(m?.variante.id).toBe("V1");
+    expect(m?.variante?.id).toBe("V1");
   });
 
   it("encuentra match por nombre de variante más específico", () => {
     const m = encontrarMejorMatch("Mole poblano con pollo", cat);
     expect(m?.platillo.id).toBe("P2");
-    expect(m?.variante.id).toBe("V2");
+    expect(m?.variante?.id).toBe("V2");
     expect(m?.puntaje).toBe(1);
+  });
+
+  it("matchea platillos sin variantes (variante = null)", () => {
+    const barbacoa = platilloBase({ id: "P3", nombre: "Barbacoa" });
+    const m = encontrarMejorMatch("Barbacoa", catalogo([barbacoa], []));
+    expect(m?.platillo.id).toBe("P3");
+    expect(m?.variante).toBeNull();
+    expect(m?.puntaje).toBe(1);
+  });
+
+  it("textos cortos matchean variantes largas que los contienen", () => {
+    const m = encontrarMejorMatch("Al pastor", cat);
+    expect(m?.platillo.id).toBe("P1");
+    expect(m?.puntaje).toBeGreaterThanOrEqual(0.6);
   });
 
   it("retorna null si no pasa el umbral", () => {

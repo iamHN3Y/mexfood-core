@@ -87,9 +87,13 @@ const analisis = await analizarMenu(cliente, imagenBase64, perfil, catalogo, {
 
 Manda la imagen del menú a Gemini visión (en la edge function), recibe
 los nombres detectados y los matchea fuzzy contra `catalogo.platillos` +
-`catalogo.variantes`. Para cada match corre `calcularMatchScore` y devuelve
-score + color semáforo. `confianzaOCR` se deriva del ratio de items que
-pudieron matchearse (≥70% → alta, 40-70% → media, <40% → baja).
+`catalogo.variantes`. Cuando matchea una variante específica, corre
+`calcularMatchScore` y devuelve score + color semáforo. Cuando solo
+matchea el platillo (texto ambiguo tipo "Chilaquiles" o platillo sin
+variantes en el catálogo), devuelve el match sin score/color, con
+`motivo` derivado del origen regional. `confianzaOCR` se deriva del
+ratio de items que pudieron matchearse (≥70% → alta, 40-70% → media,
+<40% → baja).
 
 **Nunca lanza.** Si el LLM falla, devuelve `plantillaAnalisisMenu()` —
 items vacíos, confianza baja. El matching pasa localmente en el cliente
@@ -189,7 +193,7 @@ application/json`), lo que minimiza respuestas malformadas.
 npm test -- --project @core/llm
 ```
 
-54 tests:
+57 tests:
 
 - `plantillas.test.ts` (9): templates deterministas, advertencias, frases
   condicionales al perfil.
@@ -198,10 +202,12 @@ npm test -- --project @core/llm
 - `explicacion.test.ts` (7): parseo LLM, fallback a plantilla en todos los
   modos de fallo, opcionales.
 - `frases.test.ts` (6): parseo, fallback, validación del array `frases`.
-- `matcher.test.ts` (14): `normalizar`, `similitud` (plurales, acentos,
-  stopwords), `encontrarMejorMatch` (match por platillo/variante, umbral).
-- `analizar-menu.test.ts` (10): payload a edge function, happy path con
-  scoring, items no encontrados, ratio → confianzaOCR, todos los fallbacks.
+- `matcher.test.ts` (16): `normalizar`, `similitud` (plurales, acentos,
+  stopwords), `encontrarMejorMatch` (match por platillo/variante, umbral,
+  platillos sin variantes, textos cortos vs variantes largas).
+- `analizar-menu.test.ts` (11): payload a edge function, happy path con
+  scoring, items no encontrados, ratio → confianzaOCR, match a platillo
+  sin variante, todos los fallbacks.
 
 **No hay tests de integración contra Gemini real** — no queremos flakiness
 ni gastar API calls en CI. Si necesitas validar end-to-end, corre la app

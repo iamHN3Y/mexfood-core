@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "seed": "tsx scripts/seed-supabase.ts",
     "seed:dry": "tsx scripts/seed-supabase.ts --dry-run",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "demo:menu": "tsx scripts/demo-menu.ts"
   },
   "engines": {
     "node": ">=20"

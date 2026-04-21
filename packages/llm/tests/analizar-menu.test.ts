@@ -142,6 +142,24 @@ describe("analizarMenu", () => {
     expect(analisis.confianzaOCR).toBe("baja");
   });
 
+  it("platillo sin variante: reporta match sin color ni score", async () => {
+    const catSoloPlatillo: Catalogo = {
+      platillos: [platilloBase({ id: "P9", nombre: "Barbacoa", estadoTipico: "Hidalgo" })],
+      variantes: [],
+    };
+    const { cliente } = clienteConRespuesta({
+      ok: true,
+      datos: { items: ["Barbacoa"] },
+    });
+    const analisis = await analizarMenu(cliente, "img", perfil, catSoloPlatillo);
+    expect(analisis.itemsDetectados).toHaveLength(1);
+    const item = analisis.itemsDetectados[0]!;
+    expect(item.matchPlatillo?.id).toBe("P9");
+    expect(item.color).toBeUndefined();
+    expect(item.score).toBeUndefined();
+    expect(item.motivo).toMatch(/Hidalgo/);
+  });
+
   it("descarta items no-string o vacíos", async () => {
     const { cliente } = clienteConRespuesta({
       ok: true,

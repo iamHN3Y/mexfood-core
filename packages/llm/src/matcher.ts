@@ -53,19 +53,17 @@ export function similitud(nombreCatalogo: string, textoDetectado: string): numbe
   for (const tc of tokensCat) {
     if (tokensDet.some((td) => coincidenTokens(tc, td))) hits++;
   }
-  return hits / tokensCat.length;
+  if (hits === 0) return 0;
+  return (hits / tokensCat.length + hits / tokensDet.length) / 2;
 }
 
 export interface MejorMatch {
   platillo: Platillo;
-  variante: Variante;
+  variante: Variante | null;
   puntaje: number;
 }
 
 export function encontrarMejorMatch(textoDetectado: string, catalogo: Catalogo): MejorMatch | null {
-  const platillosPorId = new Map(catalogo.platillos.map((p) => [p.id, p]));
-
-  let mejor: MejorMatch | null = null;
   const variantesPorPlatillo = new Map<string, Variante[]>();
   for (const v of catalogo.variantes) {
     const lista = variantesPorPlatillo.get(v.idPlatillo) ?? [];
@@ -73,26 +71,27 @@ export function encontrarMejorMatch(textoDetectado: string, catalogo: Catalogo):
     variantesPorPlatillo.set(v.idPlatillo, lista);
   }
 
-  for (const [platilloId, variantes] of variantesPorPlatillo) {
-    const platillo = platillosPorId.get(platilloId);
-    if (!platillo) continue;
-
+  let mejor: MejorMatch | null = null;
+  for (const platillo of catalogo.platillos) {
+    const variantes = variantesPorPlatillo.get(platillo.id) ?? [];
     const puntajePlatillo = similitud(platillo.nombre, textoDetectado);
-    let mejorVariante = variantes[0]!;
-    let puntajeVariante = similitud(mejorVariante.nombre, textoDetectado);
 
-    for (let i = 1; i < variantes.length; i++) {
-      const p = similitud(variantes[i]!.nombre, textoDetectado);
+    let mejorVariante: Variante | null = null;
+    let puntajeVariante = 0;
+    for (const v of variantes) {
+      const p = similitud(v.nombre, textoDetectado);
       if (p > puntajeVariante) {
         puntajeVariante = p;
-        mejorVariante = variantes[i]!;
+        mejorVariante = v;
       }
     }
 
     const puntaje = Math.max(puntajePlatillo, puntajeVariante);
     if (puntaje < UMBRAL_MATCH) continue;
+
+    const variante = puntajeVariante >= puntajePlatillo ? mejorVariante : null;
     if (!mejor || puntaje > mejor.puntaje) {
-      mejor = { platillo, variante: mejorVariante, puntaje };
+      mejor = { platillo, variante, puntaje };
     }
   }
 
