@@ -36,6 +36,16 @@ describe("similitud", () => {
     expect(similitud("taco al pastor", "chilaquiles verdes")).toBe(0);
   });
 
+  it("no matchea por prefijo largo (jamon ≠ jamoncillo)", () => {
+    expect(similitud("jamoncillo", "jamon")).toBe(0);
+    expect(similitud("mole", "molote")).toBe(0);
+  });
+
+  it("matchea plurales en ambas direcciones", () => {
+    expect(similitud("pozole", "pozoles")).toBe(1);
+    expect(similitud("pastores", "pastor")).toBe(1);
+  });
+
   it("stopwords no cuentan como match", () => {
     expect(similitud("mole de olla", "algo con de en la")).toBe(0);
   });

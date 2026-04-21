@@ -29,19 +29,10 @@ function tokenizarSignificativos(s: string): string[] {
     .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
 }
 
-function sinSufijoPlural(t: string): string {
-  if (t.length <= 3) return t;
-  if (t.endsWith("es")) return t.slice(0, -2);
-  if (t.endsWith("s")) return t.slice(0, -1);
-  return t;
-}
-
 function coincidenTokens(a: string, b: string): boolean {
   if (a === b) return true;
-  const sa = sinSufijoPlural(a);
-  const sb = sinSufijoPlural(b);
-  if (sa === sb) return true;
-  return sa.startsWith(sb) || sb.startsWith(sa);
+  const [corto, largo] = a.length <= b.length ? [a, b] : [b, a];
+  return largo === corto + "s" || largo === corto + "es";
 }
 
 export function similitud(nombreCatalogo: string, textoDetectado: string): number {

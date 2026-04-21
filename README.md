@@ -107,7 +107,7 @@ Todo se corre desde la raíz:
 | Comando                     | Qué hace                                                  |
 | --------------------------- | --------------------------------------------------------- |
 | `npm install`               | Instala dependencias de todos los packages                |
-| `npm test`                  | Corre los 230 tests (Vitest, un proyecto por package)     |
+| `npm test`                  | Corre los 232 tests (Vitest, un proyecto por package)     |
 | `npm run test:watch`        | Tests en watch mode                                       |
 | `npm run typecheck`         | `tsc --build` de todo el monorepo                         |
 | `npm run typecheck:scripts` | Typecheck del script de seed                              |

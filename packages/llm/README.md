@@ -193,7 +193,7 @@ application/json`), lo que minimiza respuestas malformadas.
 npm test -- --project @core/llm
 ```
 
-57 tests:
+59 tests:
 
 - `plantillas.test.ts` (9): templates deterministas, advertencias, frases
   condicionales al perfil.
@@ -202,9 +202,10 @@ npm test -- --project @core/llm
 - `explicacion.test.ts` (7): parseo LLM, fallback a plantilla en todos los
   modos de fallo, opcionales.
 - `frases.test.ts` (6): parseo, fallback, validación del array `frases`.
-- `matcher.test.ts` (16): `normalizar`, `similitud` (plurales, acentos,
-  stopwords), `encontrarMejorMatch` (match por platillo/variante, umbral,
-  platillos sin variantes, textos cortos vs variantes largas).
+- `matcher.test.ts` (18): `normalizar`, `similitud` (plurales, acentos,
+  stopwords, anti-regresión jamon/jamoncillo), `encontrarMejorMatch`
+  (match por platillo/variante, umbral, platillos sin variantes,
+  textos cortos vs variantes largas).
 - `analizar-menu.test.ts` (11): payload a edge function, happy path con
   scoring, items no encontrados, ratio → confianzaOCR, match a platillo
   sin variante, todos los fallbacks.

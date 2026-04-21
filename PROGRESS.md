@@ -114,6 +114,22 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
 - 3 tests nuevos en matcher/analizar-menu (null variante, textos cortos,
   motivo sin variante). **230 tests totales.**
 
+### Fix adicional: falso positivo de prefijo (jamoncillo)
+
+- Validación con 3 fotos más (incluyendo un menú yucateco y uno centro-sur)
+  expuso un falso positivo: "Jamón" matcheaba a `jamoncillo` (dulce de leche)
+  porque `coincidenTokens` usaba `startsWith` sin chequear diferencia de
+  longitud (jamon/jamoncillo diff=5).
+- Reemplazado `sinSufijoPlural` + `startsWith` por un chequeo explícito de
+  plurales: `largo === corto + "s" || largo === corto + "es"`. Cubre los
+  casos legítimos (taco/tacos, pozole/pozoles, pastor/pastores) sin
+  falsos positivos (jamon/jamoncillo, mole/molote). Implementación más
+  simple también (4 líneas vs 15).
+- 2 tests nuevos anti-regresión en matcher. **232 tests totales.**
+- Foto 4 (menú 20 items): 16/20 → 21/21 (100% matching, 1 verde, 8 rojos).
+- Foto 6 (menú yucateco 22 items): 14/22 matcheados — lo no-matcheado son
+  huecos reales del catálogo (chistorra, cazón, gambas, jamón serrano).
+
 ---
 
 ## Día 5 — 2026-04-21 · Gemini Flash Lite + demo end-to-end
@@ -139,7 +155,7 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
 
 - **Capa de lógica (parser, data, recomendador, llm):** feature-complete
   para el MVP del hackathon + feature avanzada (escáner de menús).
-- **Tests:** 230 pasando, cero dependencias externas en recomendador/llm,
+- **Tests:** 232 pasando, cero dependencias externas en recomendador/llm,
   mocks puros para data/parser.
 - **Infra:** Supabase con schema + seed + edge function LLM desplegada.
   El front ya puede consumir todo sin bloqueos (incluyendo escáner).
