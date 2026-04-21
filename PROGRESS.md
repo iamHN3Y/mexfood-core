@@ -61,6 +61,23 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
   - Edge function desplegada con `--no-verify-jwt`.
   - Smoke test de `explicar` y `frases` ok contra Gemini real.
 
+## Día 5 — 2026-04-21 · Gemini Flash Lite + demo end-to-end
+
+- Cambio de modelo por default de `gemini-2.5-flash` a `gemini-2.5-flash-lite`
+  (más barato y aún más rápido para el tamaño de prompts que usamos).
+  Actualizado en `supabase/functions/llm/index.ts`, `.env.example`,
+  `packages/llm/README.md`. Redeploy de la edge function con `--no-verify-jwt`.
+  Smoke test ok en `explicar` y `frases`.
+- `GEMINI_API_KEY` rotada (la vieja quedó en transcript de Día 4).
+- Nuevo `scripts/demo.ts` + `npm run demo`: carga catálogo real de Supabase,
+  corre `recomendarPlatillos` con un perfil de ejemplo (turista vegetariano
+  en Oaxaca, picante bajo, alergia a cacahuate), y llama al LLM para
+  explicación del top 1 + frases para pedirlo. Imprime tiempos por etapa
+  y el flag `fuente: llm | plantilla`.
+- Típico resultado: 214 platillos + 190 variantes cargados en ~1.3s,
+  recomendación en 3ms, LLM ~2.5s por llamada. Sirve como smoke test
+  manual end-to-end y como material para la demo del hackathon.
+
 ---
 
 ## Estado global
@@ -74,8 +91,7 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
 
 ## Pendiente opcional
 
-- Rotar `GEMINI_API_KEY` (está en logs de sesión de Claude Code).
-- Smoke test end-to-end que encadene `recomendarPlatillos` + `generarExplicacion`
-  con catálogo real (en vez de fixtures).
-- Script `npm run demo` que imprima una recomendación completa para un perfil
-  de ejemplo — útil para la demo del hackathon.
+- Parametrizar `scripts/demo.ts` para aceptar perfiles alternos vía
+  CLI args o JSON (hoy el perfil está hardcoded).
+- Tests de integración reales (catálogo real + edge function real) —
+  sin meterlos al pipeline por costo/flakiness de Gemini.

@@ -3,12 +3,12 @@
 //   supabase functions deploy llm --no-verify-jwt
 // Env (configurar en dashboard Supabase → Edge Functions → Secrets):
 //   GEMINI_API_KEY       — obligatoria
-//   GEMINI_MODEL         — opcional, default "gemini-2.5-flash"
+//   GEMINI_MODEL         — opcional, default "gemini-2.5-flash-lite"
 //   LLM_TIMEOUT_MS       — opcional, default 7000
 
 // deno-lint-ignore-file no-explicit-any
 
-const MODELO_DEFAULT = "gemini-2.5-flash";
+const MODELO_DEFAULT = "gemini-2.5-flash-lite";
 const TIMEOUT_DEFAULT_MS = 7000;
 
 const CORS_HEADERS = {

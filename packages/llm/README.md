@@ -104,7 +104,7 @@ Si `ok: false` o la forma no coincide, la librería cae a plantilla.
 que toque el código de la edge function.
 
 - **Endpoint vivo:** `https://pnrqjefkhcgwreqqqfiu.supabase.co/functions/v1/llm`
-- **Modelo:** `gemini-2.5-flash` (default)
+- **Modelo:** `gemini-2.5-flash-lite` (default)
 - **Timeout:** 12s (subido desde 7s tras smoke test — `frases` a veces tarda)
 - **Secrets configurados:** `GEMINI_API_KEY`, `LLM_TIMEOUT_MS=12000`
 - **Auth:** deploy con `--no-verify-jwt`, basta mandar `anon_key` en headers
@@ -130,7 +130,7 @@ Requiere Supabase CLI.
 ```bash
 # 1. Configurar el secret con la API key de Gemini
 supabase secrets set GEMINI_API_KEY=tu_key_aqui
-#    (opcional) GEMINI_MODEL=gemini-2.5-flash  LLM_TIMEOUT_MS=7000
+#    (opcional) GEMINI_MODEL=gemini-2.5-flash-lite  LLM_TIMEOUT_MS=7000
 
 # 2. Deploy
 supabase functions deploy llm --no-verify-jwt
@@ -139,7 +139,8 @@ supabase functions deploy llm --no-verify-jwt
 El flag `--no-verify-jwt` permite que el `anon_key` baste (sin sesión de
 usuario logueado). Seguridad se apoya en Supabase RLS + rate limits.
 
-**Modelo:** `gemini-2.5-flash` por default (rápido, barato). Ajustable via
+**Modelo:** `gemini-2.5-flash-lite` por default (el más rápido y barato de la
+familia 2.5). Ajustable via
 env `GEMINI_MODEL`. El prompt pide JSON estructurado (`responseMimeType:
 application/json`), lo que minimiza respuestas malformadas.
 

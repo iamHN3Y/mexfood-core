@@ -113,6 +113,7 @@ Todo se corre desde la raíz:
 | `npm run clean`             | Borra `dist/` y `.tsbuildinfo`                            |
 | `npm run seed:dry`          | Parsea los CSV y valida — NO escribe a Supabase           |
 | `npm run seed`              | Parsea y hace upsert a Supabase (requiere `SERVICE_ROLE`) |
+| `npm run demo`              | End-to-end: catálogo → recomendar → explicación + frases  |
 
 ---
 
@@ -228,11 +229,21 @@ npm run seed
 Es idempotente (usa `upsert` por `id_platillo` / `id_variante`), así que
 correrlo dos veces no duplica filas.
 
-### 6.4 Probar el cliente de data manualmente
+### 6.4 Demo end-to-end (catálogo real + LLM real)
 
-No hay script aún; se prueba vía los tests unitarios (que usan un fake de
-Supabase y un fake de `AsyncStorage`). Cuando conectemos el front o armemos un
-playground, agregamos un `npm run demo`.
+```bash
+npm run demo
+```
+
+Requiere `.env` con `SUPABASE_URL` y `SUPABASE_ANON_KEY`. Carga el catálogo
+completo desde Supabase, corre el recomendador con un perfil de ejemplo
+(turista vegetariano en Oaxaca, picante bajo, alergia a cacahuate) y pide
+al LLM una explicación del top 1 + frases para pedirlo. Imprime tiempos
+por etapa y el flag `fuente: llm | plantilla`.
+
+Útil como smoke test manual del pipeline completo y como material para la
+demo del hackathon. El perfil está hardcoded en `scripts/demo.ts` — edítalo
+ahí para probar otros casos.
 
 ### 6.5 Probar el LLM contra el endpoint real
 

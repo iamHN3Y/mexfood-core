@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "seed": "tsx scripts/seed-supabase.ts",
-    "seed:dry": "tsx scripts/seed-supabase.ts --dry-run"
+    "seed:dry": "tsx scripts/seed-supabase.ts --dry-run",
+    "demo": "tsx scripts/demo.ts"
   },
   "engines": {
     "node": ">=20"
