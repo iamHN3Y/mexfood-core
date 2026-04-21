@@ -61,6 +61,30 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
   - Edge function desplegada con `--no-verify-jwt`.
   - Smoke test de `explicar` y `frases` ok contra Gemini real.
 
+## Día 6 — 2026-04-21 · Escáner de menús con Gemini visión
+
+- Nueva acción `analizar-menu` en la edge function: acepta
+  `{imagenBase64, mimeType}`, la manda a Gemini 2.5 Flash Lite con
+  `inline_data`, extrae nombres de platillos como `{items: string[]}`.
+  Edge function redeployada; smoke test con PNG 1x1 devuelve `items: []`
+  correctamente.
+- Nuevo módulo `@core/llm/matcher`: fuzzy matching token-based con
+  normalización NFD (acentos), stopwords, tolerancia a plurales
+  (`tacos` ≈ `taco`). Umbral 0.6 de overlap de tokens significativos.
+- `analizarMenu(cliente, imagenBase64, perfil, catalogo, opciones?)`:
+  flujo completo — LLM extrae nombres, matcheo local contra catálogo,
+  `calcularMatchScore` por cada match, devuelve `AnalisisMenu` con
+  score/color/motivo por item y `confianzaOCR` derivada del ratio de
+  matching. Nunca lanza; cae a `plantillaAnalisisMenu` (items vacíos,
+  confianza baja) en cualquier fallo.
+- Matching pasa en el cliente, no en la edge function — el catálogo no
+  viaja a Gemini (ahorra tokens) y el front puede reutilizar su cache.
+- `@core/llm` ahora depende de `@core/recomendador` (para
+  `calcularMatchScore` al computar score por item detectado).
+- 24 tests nuevos (14 matcher + 10 analizar-menu). **227 tests totales.**
+
+---
+
 ## Día 5 — 2026-04-21 · Gemini Flash Lite + demo end-to-end
 
 - Cambio de modelo por default de `gemini-2.5-flash` a `gemini-2.5-flash-lite`
@@ -83,11 +107,11 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
 ## Estado global
 
 - **Capa de lógica (parser, data, recomendador, llm):** feature-complete
-  para el MVP del hackathon.
-- **Tests:** 203 pasando, cero dependencias externas en recomendador/llm,
+  para el MVP del hackathon + feature avanzada (escáner de menús).
+- **Tests:** 227 pasando, cero dependencias externas en recomendador/llm,
   mocks puros para data/parser.
 - **Infra:** Supabase con schema + seed + edge function LLM desplegada.
-  El front ya puede consumir todo sin bloqueos.
+  El front ya puede consumir todo sin bloqueos (incluyendo escáner).
 
 ## Pendiente opcional
 
@@ -95,3 +119,6 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
   CLI args o JSON (hoy el perfil está hardcoded).
 - Tests de integración reales (catálogo real + edge function real) —
   sin meterlos al pipeline por costo/flakiness de Gemini.
+- Caching en tabla `menus_escaneados` (hash de imagen → items detectados)
+  para evitar re-OCR del mismo menú entre sesiones.
+- Smoke test del escáner con una foto real de un menú mexicano.

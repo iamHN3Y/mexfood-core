@@ -10,6 +10,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@core/recomendador": "*",
     "@core/types": "*"
   }
 }

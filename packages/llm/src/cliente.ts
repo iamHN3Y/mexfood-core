@@ -1,6 +1,6 @@
 import { CoreError } from "@core/types";
 
-export type AccionLlm = "explicar" | "frases";
+export type AccionLlm = "explicar" | "frases" | "analizar-menu";
 
 export interface PayloadLlm {
   accion: AccionLlm;

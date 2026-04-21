@@ -16,7 +16,10 @@ Este repo contiene **la capa de lógica + persistencia** que consume la app móv
   ordenamiento y diversificación.
 - Cliente del LLM: explicaciones narrativas + frases para pedir, con
   fallback determinista a plantillas si el LLM falla.
-- Edge Function de Supabase (Deno) que proxea a Gemini 2.5 Flash.
+- Escáner de menús: Gemini visión extrae nombres de platillos de una foto
+  y los cruza contra el catálogo (fuzzy matching) para devolver un
+  `AnalisisMenu` con score/color por item.
+- Edge Function de Supabase (Deno) que proxea a Gemini 2.5 Flash Lite.
 - Migraciones SQL y script de seed.
 
 **No acá:**
@@ -194,12 +197,13 @@ const exp = await generarExplicacion(llm, perfil, top, platillo, variante);
 npm test
 ```
 
-Salida esperada: `Tests 203 passed (203)`. Cubre:
+Salida esperada: `Tests 227 passed (227)`. Cubre:
 
 - Parser: 60 tests (incluye integración contra los CSV reales).
 - Data: 30 tests (mockeando Supabase, sin red).
 - Recomendador: 83 tests (hard filters, dieta, scoring, orden y evitar).
-- LLM: 30 tests (plantillas, cliente con fake fetch, fallback en fallos).
+- LLM: 54 tests (plantillas, cliente, explicación, frases, matcher fuzzy,
+  analizar-menu con fake fetch y fallbacks).
 
 ### 6.2 Parseo del dataset de punta a punta (sin tocar red)
 

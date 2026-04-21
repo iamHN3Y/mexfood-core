@@ -17,10 +17,14 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+type Accion = "explicar" | "frases" | "analizar-menu";
+
 interface PayloadLlm {
-  accion: "explicar" | "frases";
+  accion: Accion;
   datos: unknown;
 }
+
+type ParteGemini = { text: string } | { inline_data: { mime_type: string; data: string } };
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -42,16 +46,16 @@ Deno.serve(async (req: Request) => {
     return json({ ok: false, error: "JSON inválido" }, 400);
   }
 
-  if (payload.accion !== "explicar" && payload.accion !== "frases") {
+  if (
+    payload.accion !== "explicar" &&
+    payload.accion !== "frases" &&
+    payload.accion !== "analizar-menu"
+  ) {
     return json({ ok: false, error: "accion desconocida" }, 400);
   }
 
-  const prompt =
-    payload.accion === "explicar"
-      ? construirPromptExplicar(payload.datos as any)
-      : construirPromptFrases(payload.datos as any);
-
-  if (!prompt) {
+  const partes = construirPartes(payload.accion, payload.datos);
+  if (!partes) {
     return json({ ok: false, error: "datos inválidos para la accion" }, 400);
   }
 
@@ -59,7 +63,7 @@ Deno.serve(async (req: Request) => {
   const timeoutMs = Number(Deno.env.get("LLM_TIMEOUT_MS")) || TIMEOUT_DEFAULT_MS;
 
   try {
-    const texto = await llamarGemini(apiKey, modelo, prompt, timeoutMs);
+    const texto = await llamarGemini(apiKey, modelo, partes, timeoutMs);
     const datos = parsearRespuesta(payload.accion, texto);
     if (!datos) {
       return json({ ok: false, error: "Respuesta del modelo no parseable" }, 502);
@@ -76,6 +80,18 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
+}
+
+function construirPartes(accion: Accion, datos: unknown): ParteGemini[] | null {
+  if (accion === "explicar") {
+    const prompt = construirPromptExplicar(datos as any);
+    return prompt ? [{ text: prompt }] : null;
+  }
+  if (accion === "frases") {
+    const prompt = construirPromptFrases(datos as any);
+    return prompt ? [{ text: prompt }] : null;
+  }
+  return construirPartesAnalizarMenu(datos as any);
 }
 
 function construirPromptExplicar(datos: {
@@ -147,10 +163,35 @@ function construirPromptFrases(datos: { perfil?: any; platillo?: any }): string 
     .join("\n");
 }
 
+function construirPartesAnalizarMenu(datos: {
+  imagenBase64?: string;
+  mimeType?: string;
+}): ParteGemini[] | null {
+  if (typeof datos?.imagenBase64 !== "string" || datos.imagenBase64.trim() === "") return null;
+  const mimeType =
+    typeof datos.mimeType === "string" && datos.mimeType.trim() !== ""
+      ? datos.mimeType
+      : "image/jpeg";
+
+  const prompt = [
+    `Eres un OCR culinario. Mira la imagen del menú y extrae SOLO los nombres de platillos mexicanos visibles.`,
+    `Reglas:`,
+    `- Ignora precios, descripciones largas, encabezados de sección, leyendas del restaurante.`,
+    `- Normaliza plurales/mayúsculas si es útil, pero no traduzcas ni inventes.`,
+    `- Si un platillo tiene varias opciones (ej. "taco al pastor / carnitas / suadero"), lista cada uno.`,
+    `- Si no lees nada legible, devuelve items: [].`,
+    ``,
+    `Responde EXCLUSIVAMENTE con JSON válido, sin markdown:`,
+    `{"items": ["Taco al pastor", "Mole poblano", ...]}`,
+  ].join("\n");
+
+  return [{ text: prompt }, { inline_data: { mime_type: mimeType, data: datos.imagenBase64 } }];
+}
+
 async function llamarGemini(
   apiKey: string,
   modelo: string,
-  prompt: string,
+  partes: ParteGemini[],
   timeoutMs: number,
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
@@ -162,7 +203,7 @@ async function llamarGemini(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ parts: partes }],
         generationConfig: {
           temperature: 0.6,
           responseMimeType: "application/json",
@@ -187,7 +228,7 @@ async function llamarGemini(
   }
 }
 
-function parsearRespuesta(accion: "explicar" | "frases", texto: string): unknown | null {
+function parsearRespuesta(accion: Accion, texto: string): unknown | null {
   const limpio = texto
     .trim()
     .replace(/^```json\s*/i, "")
@@ -211,21 +252,31 @@ function parsearRespuesta(accion: "explicar" | "frases", texto: string): unknown
     return out;
   }
 
-  if (!Array.isArray(datos?.frases)) return null;
-  const frases = [];
-  for (const f of datos.frases) {
-    if (
-      typeof f?.fraseEs !== "string" ||
-      typeof f?.traduccion !== "string" ||
-      typeof f?.pronunciacionFonetica !== "string"
-    ) {
-      return null;
+  if (accion === "frases") {
+    if (!Array.isArray(datos?.frases)) return null;
+    const frases = [];
+    for (const f of datos.frases) {
+      if (
+        typeof f?.fraseEs !== "string" ||
+        typeof f?.traduccion !== "string" ||
+        typeof f?.pronunciacionFonetica !== "string"
+      ) {
+        return null;
+      }
+      frases.push({
+        fraseEs: f.fraseEs,
+        traduccion: f.traduccion,
+        pronunciacionFonetica: f.pronunciacionFonetica,
+      });
     }
-    frases.push({
-      fraseEs: f.fraseEs,
-      traduccion: f.traduccion,
-      pronunciacionFonetica: f.pronunciacionFonetica,
-    });
+    return { frases };
   }
-  return { frases };
+
+  // analizar-menu
+  if (!Array.isArray(datos?.items)) return null;
+  const items: string[] = [];
+  for (const it of datos.items) {
+    if (typeof it === "string" && it.trim() !== "") items.push(it.trim());
+  }
+  return { items };
 }

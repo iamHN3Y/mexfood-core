@@ -4,7 +4,8 @@ Librería cliente del Edge Function de LLM. Expone funciones async que piden
 explicaciones o frases a Gemini (vía proxy en Supabase) y **siempre resuelven**:
 si el LLM falla, caen a plantillas deterministas.
 
-**Dependencias:** solo `@core/types`. Cero deps externas — el transporte es
+**Dependencias:** `@core/types` y `@core/recomendador` (para puntuar items
+detectados por el escáner de menús). Cero deps externas — el transporte es
 `fetch`, inyectable.
 
 ---
@@ -16,8 +17,10 @@ import {
   crearLlmClient,
   generarExplicacion,
   generarFrasesParaPedir,
+  analizarMenu,
   plantillaExplicacion,
   plantillaFrases,
+  plantillaAnalisisMenu,
 } from "@core/llm";
 ```
 
@@ -61,9 +64,42 @@ Mismas garantías: siempre devuelve ≥1 frase. Fallback determinista incluye
 3 frases básicas (pedir el platillo, preguntar ingredientes, una condicional
 según `toleranciaPicante` o `alergias` del perfil).
 
+### `analizarMenu(cliente, imagenBase64, perfil, catalogo, opciones?)`
+
+```typescript
+const analisis = await analizarMenu(cliente, imagenBase64, perfil, catalogo, {
+  mimeType: "image/jpeg", // opcional, default "image/jpeg"
+});
+// {
+//   itemsDetectados: [
+//     {
+//       textoOriginal: "Tacos al pastor",
+//       matchPlatillo?: Platillo,
+//       score?: 85,
+//       color?: "verde",
+//       motivo: "Muy recomendable · Típico de CDMX"
+//     },
+//     ...
+//   ],
+//   confianzaOCR: "alta" | "media" | "baja"
+// }
+```
+
+Manda la imagen del menú a Gemini visión (en la edge function), recibe
+los nombres detectados y los matchea fuzzy contra `catalogo.platillos` +
+`catalogo.variantes`. Para cada match corre `calcularMatchScore` y devuelve
+score + color semáforo. `confianzaOCR` se deriva del ratio de items que
+pudieron matchearse (≥70% → alta, 40-70% → media, <40% → baja).
+
+**Nunca lanza.** Si el LLM falla, devuelve `plantillaAnalisisMenu()` —
+items vacíos, confianza baja. El matching pasa localmente en el cliente
+(no se manda el catálogo a Gemini), así que si el catálogo ya está
+cacheado no hay roundtrip extra.
+
 ### Plantillas expuestas
 
-`plantillaExplicacion` y `plantillaFrases` son funciones **puras** útiles para:
+`plantillaExplicacion`, `plantillaFrases` y `plantillaAnalisisMenu` son
+funciones **puras** útiles para:
 
 - Tests del front sin tocar red.
 - Generar preview estático mientras el LLM carga.
@@ -91,14 +127,15 @@ Si `ok: false` o la forma no coincide, la librería cae a plantilla.
 
 ### Payload por acción
 
-| Acción     | `datos` incluye                                   | Respuesta `datos`                       |
-| ---------- | ------------------------------------------------- | --------------------------------------- |
-| `explicar` | `perfil`, `recomendacion`, `platillo`, `variante` | `{ texto, tipCultural?, advertencia? }` |
-| `frases`   | `perfil`, `platillo`                              | `{ frases: Frase[] }`                   |
+| Acción          | `datos` incluye                                   | Respuesta `datos`                       |
+| --------------- | ------------------------------------------------- | --------------------------------------- |
+| `explicar`      | `perfil`, `recomendacion`, `platillo`, `variante` | `{ texto, tipCultural?, advertencia? }` |
+| `frases`        | `perfil`, `platillo`                              | `{ frases: Frase[] }`                   |
+| `analizar-menu` | `imagenBase64`, `mimeType?`                       | `{ items: string[] }`                   |
 
 ---
 
-## Estado actual (2026-04-20)
+## Estado actual (2026-04-21)
 
 **Ya está desplegado y funcionando.** El equipo NO necesita redeployar a menos
 que toque el código de la edge function.
@@ -152,7 +189,7 @@ application/json`), lo que minimiza respuestas malformadas.
 npm test -- --project @core/llm
 ```
 
-30 tests:
+54 tests:
 
 - `plantillas.test.ts` (9): templates deterministas, advertencias, frases
   condicionales al perfil.
@@ -161,6 +198,10 @@ npm test -- --project @core/llm
 - `explicacion.test.ts` (7): parseo LLM, fallback a plantilla en todos los
   modos de fallo, opcionales.
 - `frases.test.ts` (6): parseo, fallback, validación del array `frases`.
+- `matcher.test.ts` (14): `normalizar`, `similitud` (plurales, acentos,
+  stopwords), `encontrarMejorMatch` (match por platillo/variante, umbral).
+- `analizar-menu.test.ts` (10): payload a edge function, happy path con
+  scoring, items no encontrados, ratio → confianzaOCR, todos los fallbacks.
 
 **No hay tests de integración contra Gemini real** — no queremos flakiness
 ni gastar API calls en CI. Si necesitas validar end-to-end, corre la app
