@@ -98,7 +98,31 @@ Si `ok: false` o la forma no coincide, la librería cae a plantilla.
 
 ---
 
-## Deploy de la Edge Function
+## Estado actual (2026-04-20)
+
+**Ya está desplegado y funcionando.** El equipo NO necesita redeployar a menos
+que toque el código de la edge function.
+
+- **Endpoint vivo:** `https://pnrqjefkhcgwreqqqfiu.supabase.co/functions/v1/llm`
+- **Modelo:** `gemini-2.5-flash` (default)
+- **Timeout:** 12s (subido desde 7s tras smoke test — `frases` a veces tarda)
+- **Secrets configurados:** `GEMINI_API_KEY`, `LLM_TIMEOUT_MS=12000`
+- **Auth:** deploy con `--no-verify-jwt`, basta mandar `anon_key` en headers
+
+Smoke test rápido desde la raíz del repo:
+
+```bash
+source .env
+curl -sS -X POST "${SUPABASE_URL}/functions/v1/llm" \
+  -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+  -H "apikey: ${SUPABASE_ANON_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"accion":"explicar","datos":{ ... }}'
+```
+
+---
+
+## Deploy de la Edge Function (solo si tocaste el código)
 
 El código vive en [`supabase/functions/llm/index.ts`](../../supabase/functions/llm/index.ts).
 Requiere Supabase CLI.

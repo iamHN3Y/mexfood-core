@@ -12,15 +12,16 @@ Este repo contiene **la capa de lógica + persistencia** que consume la app móv
 
 - Parseo del dataset CSV (214 platillos + 190 variantes).
 - Cliente de Supabase: `fetchCatalogo`, cache local, `registrarFeedback`.
-- Motor de recomendación: reglas puras de compatibilidad (hard filters y,
-  próximamente, soft filters + scoring).
+- Motor de recomendación: hard filters, scoring 0-100 con semáforo,
+  ordenamiento y diversificación.
+- Cliente del LLM: explicaciones narrativas + frases para pedir, con
+  fallback determinista a plantillas si el LLM falla.
+- Edge Function de Supabase (Deno) que proxea a Gemini 2.5 Flash.
 - Migraciones SQL y script de seed.
 
 **No acá:**
 
 - UI, navegación, componentes de React Native. Viven en otro repo.
-- El LLM (Gemini) se llamará desde una Edge Function de Supabase —
-  todavía no está.
 
 Documentos de referencia:
 
@@ -232,6 +233,25 @@ correrlo dos veces no duplica filas.
 No hay script aún; se prueba vía los tests unitarios (que usan un fake de
 Supabase y un fake de `AsyncStorage`). Cuando conectemos el front o armemos un
 playground, agregamos un `npm run demo`.
+
+### 6.5 Probar el LLM contra el endpoint real
+
+La edge function `llm` está desplegada en
+`https://pnrqjefkhcgwreqqqfiu.supabase.co/functions/v1/llm` con Gemini 2.5 Flash
+detrás (secrets `GEMINI_API_KEY` + `LLM_TIMEOUT_MS=12000` configurados).
+
+```bash
+source .env
+curl -sS -X POST "${SUPABASE_URL}/functions/v1/llm" \
+  -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+  -H "apikey: ${SUPABASE_ANON_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"accion":"explicar","datos":{"perfil":{"idioma":"es","estadoActual":"Ciudad de México","toleranciaPicante":"medio","alergias":[]},"recomendacion":{"apto":true,"score":95,"etiqueta":"Muy recomendable","razonesPositivas":["Típico de CDMX"],"razonesNegativas":[]},"platillo":{"nombre":"Taco al pastor","categoria":"antojito","estadoTipico":"Ciudad de México","descripcion":"Taco al trompo.","notaCultural":"Clásico."},"variante":{"nombre":"Taco al pastor","ingredientes":["tortilla","cerdo","piña"]}}}'
+```
+
+Debería devolver `{"ok":true,"datos":{"texto":"...","tipCultural":"..."}}`.
+Si sale `{"ok":false,"error":"..."}` la librería `@core/llm` automáticamente
+cae a plantilla — la app no se rompe.
 
 ---
 
