@@ -63,7 +63,10 @@ mexfood-core/
 │   ├── types/                   ← tipos compartidos (Perfil, Catalogo, Recomendacion…)
 │   ├── parser/                  ← CSV → Catalogo (usado por el seed)
 │   ├── data/                    ← cliente Supabase (fetchCatalogo, cache, feedback)
-│   └── recomendador/            ← motor de reglas (hard filters hoy, scoring mañana)
+│   ├── recomendador/            ← motor de reglas (hard filters + scoring + orden)
+│   └── llm/                     ← cliente Edge Function (explicaciones, frases) + plantillas
+│
+├── supabase/functions/llm/      ← Edge Function Deno (proxy a Gemini)
 │
 ├── data/                        ← dataset CSV origen
 │   ├── platillos.csv
@@ -89,6 +92,7 @@ Cada package de `packages/*` tiene su propio README con API y ejemplos:
 - [@core/parser](packages/parser/README.md)
 - [@core/data](packages/data/README.md)
 - [@core/recomendador](packages/recomendador/README.md)
+- [@core/llm](packages/llm/README.md)
 
 ---
 
@@ -99,7 +103,7 @@ Todo se corre desde la raíz:
 | Comando                     | Qué hace                                                  |
 | --------------------------- | --------------------------------------------------------- |
 | `npm install`               | Instala dependencias de todos los packages                |
-| `npm test`                  | Corre los 132 tests (Vitest, un proyecto por package)     |
+| `npm test`                  | Corre los 203 tests (Vitest, un proyecto por package)     |
 | `npm run test:watch`        | Tests en watch mode                                       |
 | `npm run typecheck`         | `tsc --build` de todo el monorepo                         |
 | `npm run typecheck:scripts` | Typecheck del script de seed                              |
@@ -156,8 +160,27 @@ const aptas = catalogo.variantes
 await data.registrarFeedback(aptas[0].v.id, true);
 ```
 
-En Día 3+ se agregan `recomendarPlatillos` y `calcularMatchScore`, que
-devolverán la lista ordenada con score, etiqueta de semáforo y razones.
+Ahora con `@core/recomendador` completo y `@core/llm` disponible, el front
+puede pedir recomendaciones ordenadas con score y luego generar la
+explicación narrativa del top platillo:
+
+```typescript
+import { recomendarPlatillos } from "@core/recomendador";
+import { crearLlmClient, generarExplicacion } from "@core/llm";
+
+const { recomendados } = recomendarPlatillos(perfil, catalogo);
+const top = recomendados[0];
+
+const llm = crearLlmClient({
+  url: `${process.env.SUPABASE_URL}/functions/v1/llm`,
+  anonKey: process.env.SUPABASE_ANON_KEY!,
+});
+
+const platillo = catalogo.platillos.find((p) => p.id === top.platilloId)!;
+const variante = catalogo.variantes.find((v) => v.id === top.varianteId)!;
+const exp = await generarExplicacion(llm, perfil, top, platillo, variante);
+// exp.fuente === "llm" si Gemini respondió, o "plantilla" si falló
+```
 
 ---
 
@@ -169,11 +192,12 @@ devolverán la lista ordenada con score, etiqueta de semáforo y razones.
 npm test
 ```
 
-Salida esperada: `Tests 132 passed (132)`. Cubre:
+Salida esperada: `Tests 203 passed (203)`. Cubre:
 
 - Parser: 60 tests (incluye integración contra los CSV reales).
 - Data: 30 tests (mockeando Supabase, sin red).
-- Recomendador: 42 tests (hard filters y precedencia de dieta).
+- Recomendador: 83 tests (hard filters, dieta, scoring, orden y evitar).
+- LLM: 30 tests (plantillas, cliente con fake fetch, fallback en fallos).
 
 ### 6.2 Parseo del dataset de punta a punta (sin tocar red)
 

@@ -4,6 +4,7 @@
     { "path": "./packages/types" },
     { "path": "./packages/parser" },
     { "path": "./packages/data" },
-    { "path": "./packages/recomendador" }
+    { "path": "./packages/recomendador" },
+    { "path": "./packages/llm" }
   ]
 }

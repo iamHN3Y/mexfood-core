@@ -30,6 +30,15 @@ export default defineConfig({
           exclude: ["**/node_modules/**", "**/dist/**"],
         },
       },
+      {
+        extends: false,
+        test: {
+          name: "@core/llm",
+          root: "./packages/llm",
+          include: ["tests/**/*.test.ts"],
+          exclude: ["**/node_modules/**", "**/dist/**"],
+        },
+      },
     ],
   },
 });

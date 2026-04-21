@@ -4,6 +4,7 @@ export type CodigoError =
   | "LLM_TIMEOUT"
   | "LLM_INVALID_RESPONSE"
   | "PARSER"
+  | "CONFIG"
   | "UNKNOWN";
 
 export class CoreError extends Error {

@@ -1,0 +1,15 @@
+{
+  "name": "@core/llm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cliente del Edge Function de LLM: explicaciones, frases para pedir, con fallback a plantilla",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@core/types": "*"
+  }
+}
