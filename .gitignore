@@ -19,3 +19,6 @@ supabase/.temp/
 Anexo Hackathón.docx
 
 pruebas/
+
+# Frontend vive en otro repo (Sottoo/MexFood). Se clona aquí solo para dev local.
+apps/
