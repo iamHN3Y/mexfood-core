@@ -13,6 +13,7 @@ export type {
 export type {
   AnalisisMenu,
   ConfianzaOCR,
+  EntradaMenuCache,
   Explicacion,
   Frase,
   FuenteExplicacion,

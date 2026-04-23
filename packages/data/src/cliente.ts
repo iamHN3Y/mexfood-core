@@ -7,6 +7,11 @@ import {
   type StorageAdapter,
 } from "./cache.js";
 import { registrarFeedback } from "./feedback.js";
+import {
+  fetchMenuCache,
+  guardarMenuCache,
+  type EntradaMenuCache,
+} from "./menu-cache.js";
 
 export interface ConfigDataClient {
   url: string;
@@ -24,6 +29,8 @@ export interface DataClient {
     util: boolean,
     perfilHash?: string,
   ): Promise<void>;
+  fetchMenuCache(hashImagen: string): Promise<EntradaMenuCache | null>;
+  guardarMenuCache(hashImagen: string, entrada: EntradaMenuCache): Promise<void>;
 }
 
 export function crearClienteSupabase(config: ConfigDataClient): SupabaseClient {
@@ -42,5 +49,8 @@ export function crearDataClient(config: ConfigDataClient): DataClient {
       fetchCatalogoConCache(supa, storage, opciones),
     registrarFeedback: (varianteId, util, perfilHash) =>
       registrarFeedback(supa, varianteId, util, perfilHash),
+    fetchMenuCache: (hashImagen) => fetchMenuCache(supa, hashImagen),
+    guardarMenuCache: (hashImagen, entrada) =>
+      guardarMenuCache(supa, hashImagen, entrada),
   };
 }

@@ -2,9 +2,12 @@ import type { AnalisisMenu, Catalogo, ConfianzaOCR, ItemMenuDetectado, Perfil } 
 import { calcularMatchScore } from "@core/recomendador";
 import type { LlmClient } from "./cliente.js";
 import { encontrarMejorMatch } from "./matcher.js";
+import type { MenuCache } from "./menu-cache.js";
 
 export interface OpcionesAnalizarMenu {
   mimeType?: string;
+  cache?: MenuCache;
+  hashImagen?: string;
 }
 
 export async function analizarMenu(
@@ -14,6 +17,13 @@ export async function analizarMenu(
   catalogo: Catalogo,
   opciones: OpcionesAnalizarMenu = {},
 ): Promise<AnalisisMenu> {
+  const { cache, hashImagen } = opciones;
+
+  if (cache && hashImagen) {
+    const hit = await cache.get(hashImagen);
+    if (hit) return construirAnalisis(hit.items, perfil, catalogo);
+  }
+
   const res = await cliente.invocar({
     accion: "analizar-menu",
     datos: { imagenBase64, mimeType: opciones.mimeType ?? "image/jpeg" },
@@ -24,7 +34,13 @@ export async function analizarMenu(
   const textos = parsearItems(res.datos);
   if (textos === null) return plantillaAnalisisMenu();
 
-  return construirAnalisis(textos, perfil, catalogo);
+  const analisis = construirAnalisis(textos, perfil, catalogo);
+
+  if (cache && hashImagen) {
+    void cache.set(hashImagen, { items: textos, confianzaOCR: analisis.confianzaOCR });
+  }
+
+  return analisis;
 }
 
 export function plantillaAnalisisMenu(): AnalisisMenu {

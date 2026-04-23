@@ -16,6 +16,7 @@ export { generarFrasesParaPedir } from "./frases.js";
 
 export { analizarMenu, plantillaAnalisisMenu } from "./analizar-menu.js";
 export type { OpcionesAnalizarMenu } from "./analizar-menu.js";
+export type { MenuCache } from "./menu-cache.js";
 
 export { similitud, normalizar, encontrarMejorMatch } from "./matcher.js";
 export type { MejorMatch } from "./matcher.js";

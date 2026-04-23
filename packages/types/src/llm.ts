@@ -30,3 +30,8 @@ export interface AnalisisMenu {
   itemsDetectados: ItemMenuDetectado[];
   confianzaOCR: ConfianzaOCR;
 }
+
+export interface EntradaMenuCache {
+  items: string[];
+  confianzaOCR: ConfianzaOCR;
+}

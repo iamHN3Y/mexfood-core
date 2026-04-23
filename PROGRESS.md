@@ -130,6 +130,29 @@ Registro por día de lo terminado. Sirve para el equipo y para retrospectiva.
 - Foto 6 (menú yucateco 22 items): 14/22 matcheados — lo no-matcheado son
   huecos reales del catálogo (chistorra, cazón, gambas, jamón serrano).
 
+## Día 8 — 2026-04-22 · Cache de escaneos y ampliación de catálogo
+
+- +6 platillos en `data/platillos.csv` (picadita, nachos, chicharrón,
+  cuerito, chistorra, pan de cazón) — cierra huecos visibles en las fotos
+  de menú yucateco y fondas. Catálogo ahora 220 platillos / 190 variantes.
+- **Cache de menús escaneados** (evita pagar Gemini visión dos veces por
+  la misma foto):
+  - Migración `0002_menus_escaneados.sql`: tabla `menus_escaneados`
+    (`hash_imagen` PK, `items` JSONB array-checked, enum `confianza_ocr`
+    separado de `nivel` por diferencia de valores). RLS: SELECT+INSERT
+    públicos (fire-and-forget; riesgo de basura acotado a un hash).
+  - `@core/data`: `fetchMenuCache` + `guardarMenuCache` — nunca lanzan,
+    validan shape, loguean warn en fallo. Expuestos vía `DataClient`.
+  - `EntradaMenuCache` vive en `@core/types` para evitar ciclo
+    `@core/llm` ↔ `@core/data`.
+  - `@core/llm`: `MenuCache` interface estructural, `analizarMenu` acepta
+    `{cache, hashImagen}` opcionales. Hit: salta LLM, reconstruye análisis
+    con catálogo y perfil actuales (confianza se recomputa, no se lee del
+    cache — así crece con el catálogo). Miss: guarda fire-and-forget.
+  - `demo-menu.ts` imprime hit/miss y hash antes de llamar al LLM.
+- 4 tests nuevos (hit salta LLM, miss guarda, LLM caído no guarda, sin
+  hash se ignora cache). **236 tests totales.**
+
 ---
 
 ## Día 5 — 2026-04-21 · Gemini Flash Lite + demo end-to-end

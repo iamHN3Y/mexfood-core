@@ -9,7 +9,7 @@ const RUTA_VARIANTES = resolve(DATA_DIR, "variantes_platillo.csv");
 describe("integración: dataset real", () => {
   it("carga platillos.csv sin errores y con el conteo esperado", async () => {
     const cat = await cargarCatalogoDesdeArchivos(RUTA_PLATILLOS, RUTA_VARIANTES);
-    expect(cat.platillos).toHaveLength(214);
+    expect(cat.platillos).toHaveLength(220);
     expect(cat.variantes).toHaveLength(190);
   });
 

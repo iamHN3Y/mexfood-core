@@ -1,8 +1,9 @@
 import "dotenv/config";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { crearDataClient } from "@core/data";
-import { analizarMenu, crearLlmClient } from "@core/llm";
+import { analizarMenu, crearLlmClient, type MenuCache } from "@core/llm";
 import type { AnalisisMenu, Catalogo, ItemMenuDetectado, Perfil } from "@core/types";
 
 const PERFIL_DEMO: Perfil = {
@@ -88,7 +89,20 @@ async function main(): Promise<void> {
     `  ${catalogo.platillos.length} platillos + ${catalogo.variantes.length} variantes (${Date.now() - t1} ms)`,
   );
 
-  separador("3. Analizando menú (Gemini visión + matching local)");
+  const hashImagen = createHash("sha256").update(base64).digest("hex");
+  const cache: MenuCache = {
+    get: (h) => data.fetchMenuCache(h),
+    set: (h, e) => data.guardarMenuCache(h, e),
+  };
+
+  separador("3. Revisando cache de menús escaneados");
+  const t2a = Date.now();
+  const hit = await cache.get(hashImagen);
+  console.log(
+    `  hash: ${hashImagen.slice(0, 12)}…  ·  ${hit ? `HIT (${hit.items.length} items cacheados)` : "MISS"} (${Date.now() - t2a} ms)`,
+  );
+
+  separador("4. Analizando menú (Gemini visión + matching local)");
   const llm = crearLlmClient({
     url: `${url}/functions/v1/llm`,
     anonKey,
@@ -98,6 +112,8 @@ async function main(): Promise<void> {
   const t2 = Date.now();
   const analisis: AnalisisMenu = await analizarMenu(llm, base64, PERFIL_DEMO, catalogo, {
     mimeType,
+    cache,
+    hashImagen,
   });
   const dur = Date.now() - t2;
 
