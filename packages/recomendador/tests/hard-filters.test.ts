@@ -84,31 +84,31 @@ describe("aplicarHardFilters — alergias", () => {
 
 describe("aplicarHardFilters — dieta (precedencia)", () => {
   it("vegano bloquea variante vegetariana pero no vegana", () => {
-    const p = perfilBase({ dieta: { vegano: true, vegetariano: false, pescetariano: false } });
+    const p = perfilBase({ dieta: { vegano: true, vegetariano: false, pescetariano: false, keto: false } });
     expect(aplicarHardFilters(p, varianteVegetariana()).apto).toBe(false);
     expect(aplicarHardFilters(p, varianteVegana()).apto).toBe(true);
   });
 
   it("vegetariano permite vegana, bloquea carne", () => {
-    const p = perfilBase({ dieta: { vegano: false, vegetariano: true, pescetariano: false } });
+    const p = perfilBase({ dieta: { vegano: false, vegetariano: true, pescetariano: false, keto: false } });
     expect(aplicarHardFilters(p, varianteVegana()).apto).toBe(true);
     expect(aplicarHardFilters(p, varianteBase()).apto).toBe(false);
   });
 
   it("pescetariano permite pescado pero bloquea cerdo", () => {
-    const p = perfilBase({ dieta: { vegano: false, vegetariano: false, pescetariano: true } });
+    const p = perfilBase({ dieta: { vegano: false, vegetariano: false, pescetariano: true, keto: false } });
     expect(aplicarHardFilters(p, variantePescado()).apto).toBe(true);
     expect(aplicarHardFilters(p, varianteBase()).apto).toBe(false);
   });
 
   it("vegano+pescetariano: gana vegano (el más estricto)", () => {
-    const p = perfilBase({ dieta: { vegano: true, vegetariano: false, pescetariano: true } });
+    const p = perfilBase({ dieta: { vegano: true, vegetariano: false, pescetariano: true, keto: false } });
     expect(aplicarHardFilters(p, variantePescado()).apto).toBe(false);
     expect(aplicarHardFilters(p, varianteVegana()).apto).toBe(true);
   });
 
   it("pescetariano+vegetariano: gana pescetariano (permite pescado)", () => {
-    const p = perfilBase({ dieta: { vegano: false, vegetariano: true, pescetariano: true } });
+    const p = perfilBase({ dieta: { vegano: false, vegetariano: true, pescetariano: true, keto: false } });
     expect(aplicarHardFilters(p, variantePescado()).apto).toBe(true);
   });
 });
@@ -172,7 +172,7 @@ describe("aplicarHardFilters — prioridad de reporte", () => {
     const res = aplicarHardFilters(
       perfilBase({
         alergias: ["cacahuate"],
-        dieta: { vegano: true, vegetariano: false, pescetariano: false },
+        dieta: { vegano: true, vegetariano: false, pescetariano: false, keto: false },
       }),
       varianteBase({ alergenos: ["cacahuate"] }),
     );
@@ -183,7 +183,7 @@ describe("aplicarHardFilters — prioridad de reporte", () => {
   it("dieta se reporta antes que restricciones si ambas bloquean", () => {
     const res = aplicarHardFilters(
       perfilBase({
-        dieta: { vegano: true, vegetariano: false, pescetariano: false },
+        dieta: { vegano: true, vegetariano: false, pescetariano: false, keto: false },
         restricciones: { sinGluten: true, sinLacteos: false },
       }),
       varianteBase({ contieneGluten: true }),
@@ -209,7 +209,7 @@ describe("aplicarHardFilters — casos complejos realistas", () => {
   it("turista vegana con alergia a cacahuate + platillo de nopales sin cacahuate → apto", () => {
     const p = perfilBase({
       alergias: ["cacahuate"],
-      dieta: { vegano: true, vegetariano: false, pescetariano: false },
+      dieta: { vegano: true, vegetariano: false, pescetariano: false, keto: false },
     });
     expect(aplicarHardFilters(p, varianteVegana()).apto).toBe(true);
   });
@@ -223,7 +223,7 @@ describe("aplicarHardFilters — casos complejos realistas", () => {
 
   it("celíaco pescetariano en tacos de camarón sin gluten → apto", () => {
     const p = perfilBase({
-      dieta: { vegano: false, vegetariano: false, pescetariano: true },
+      dieta: { vegano: false, vegetariano: false, pescetariano: true, keto: false },
       restricciones: { sinGluten: true, sinLacteos: false },
     });
     const v = variantePescado({ contieneGluten: false });

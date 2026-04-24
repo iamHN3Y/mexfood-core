@@ -3,7 +3,7 @@ import type { Perfil, Platillo, Recomendacion, Variante } from "@core/types";
 export function perfilBase(overrides: Partial<Perfil> = {}): Perfil {
   return {
     alergias: [],
-    dieta: { vegetariano: false, vegano: false, pescetariano: false },
+    dieta: { vegetariano: false, vegano: false, pescetariano: false, keto: false },
     restricciones: { sinGluten: false, sinLacteos: false },
     evitaCerdo: false,
     evitaAlcohol: false,

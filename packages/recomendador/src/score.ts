@@ -29,7 +29,36 @@ export const PESOS = {
   regional: {
     bonus: 10,
   },
+  keto: {
+    // Keto no bloquea (no es hard filter) — penaliza en score.
+    // Heavy = base evidente de carbos (tortilla, arroz, pan, masa, azúcar, harina, gluten).
+    // Medium = carbos secundarios (frijol, maíz molido, plátano frito).
+    carbsHeavy: -20,
+    carbsMedium: -10,
+  },
 } as const;
+
+// Listas para detectar carbos en ingredientes — normalizadas (sin acento, lowercase).
+// Heavy captura los carbs dominantes del platillo; medium los secundarios.
+const KETO_CARBS_HEAVY = [
+  "tortilla",
+  "arroz",
+  "pan",
+  "masa",
+  "harina",
+  "azucar",
+  "miel",
+  "piloncillo",
+] as const;
+
+const KETO_CARBS_MEDIUM = [
+  "frijol",
+  "maiz",
+  "elote",
+  "platano",
+  "camote",
+  "papa",
+] as const;
 
 export const UMBRALES = {
   verde: 80,
@@ -118,6 +147,29 @@ function ajustesIngredientesFavoritos(perfil: Perfil, v: Variante): Ajuste[] {
   return ajustes;
 }
 
+function ajusteKeto(perfil: Perfil, v: Variante): Ajuste | null {
+  if (!perfil.dieta.keto) return null;
+  // Gluten es carbo heavy por definición — usamos el flag directo.
+  const ingrNorm = v.ingredientes.map(normalizar);
+  const haveHeavy =
+    v.contieneGluten ||
+    ingrNorm.some((i) => KETO_CARBS_HEAVY.some((c) => i.includes(c)));
+  if (haveHeavy) {
+    return {
+      delta: PESOS.keto.carbsHeavy,
+      razon: "Alto en carbohidratos (no compatible con keto)",
+    };
+  }
+  const haveMedium = ingrNorm.some((i) => KETO_CARBS_MEDIUM.some((c) => i.includes(c)));
+  if (haveMedium) {
+    return {
+      delta: PESOS.keto.carbsMedium,
+      razon: "Carbohidratos moderados (afecta tu keto)",
+    };
+  }
+  return null;
+}
+
 function ajusteRegional(perfil: Perfil, p: Platillo): Ajuste | null {
   if (!perfil.estadoActual || !p.estadoTipico) return null;
   if (coincideTexto(perfil.estadoActual, p.estadoTipico)) {
@@ -176,6 +228,9 @@ export function calcularMatchScore(
 
   const dig = ajusteDigestivo(perfil, variante);
   if (dig) negativos.push(dig);
+
+  const keto = ajusteKeto(perfil, variante);
+  if (keto) negativos.push(keto);
 
   const evitar = ajustesIngredientesEvitar(perfil, variante);
   const evitarDeltaTopeado = capearTotal(evitar, PESOS.ingredientesEvitar.tope);

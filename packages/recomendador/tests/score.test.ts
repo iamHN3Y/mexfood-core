@@ -308,3 +308,99 @@ describe("calcularMatchScore — umbrales de etiqueta aplicados al score real", 
     expect(r.color).toBe("rojo"); // <40
   });
 });
+
+describe("calcularMatchScore — keto (soft signal)", () => {
+  const ketoOn = { vegetariano: false, vegano: false, pescetariano: false, keto: true };
+
+  it("keto off: ingredientes con carbos no penalizan", () => {
+    const perfil = perfilBase({
+      toleranciaPicante: "alto",
+      estadoActual: "Chiapas",
+    });
+    const v = varianteBase({
+      ingredientes: ["tortilla", "cerdo"],
+      nivelPicante: "bajo",
+      riesgoDigestivo: "bajo",
+    });
+    const r = calcularMatchScore(perfil, v, platilloBase({ estadoTipico: "Nayarit" }));
+    expect(r.score).toBe(100);
+  });
+
+  it("keto on + tortilla: penaliza heavy (-20)", () => {
+    const perfil = perfilBase({
+      dieta: ketoOn,
+      toleranciaPicante: "alto",
+      estadoActual: "Chiapas",
+    });
+    const v = varianteBase({
+      ingredientes: ["tortilla", "cerdo"],
+      nivelPicante: "bajo",
+      riesgoDigestivo: "bajo",
+    });
+    const r = calcularMatchScore(perfil, v, platilloBase({ estadoTipico: "Nayarit" }));
+    expect(r.score).toBe(80); // 100 - 20
+    expect(r.razonesNegativas.some((x) => /keto/i.test(x))).toBe(true);
+  });
+
+  it("keto on + gluten flag: penaliza heavy aunque no haya nombres de carbo", () => {
+    const perfil = perfilBase({
+      dieta: ketoOn,
+      toleranciaPicante: "alto",
+      estadoActual: "Chiapas",
+    });
+    const v = varianteBase({
+      ingredientes: ["salsa", "queso"],
+      contieneGluten: true,
+      nivelPicante: "bajo",
+      riesgoDigestivo: "bajo",
+    });
+    const r = calcularMatchScore(perfil, v, platilloBase({ estadoTipico: "Nayarit" }));
+    expect(r.score).toBe(80);
+  });
+
+  it("keto on + frijol (medium): penaliza menos (-10)", () => {
+    const perfil = perfilBase({
+      dieta: ketoOn,
+      toleranciaPicante: "alto",
+      estadoActual: "Chiapas",
+    });
+    const v = varianteBase({
+      ingredientes: ["frijol", "queso"],
+      nivelPicante: "bajo",
+      riesgoDigestivo: "bajo",
+    });
+    const r = calcularMatchScore(perfil, v, platilloBase({ estadoTipico: "Nayarit" }));
+    expect(r.score).toBe(90);
+  });
+
+  it("keto on + sin carbos (solo proteína/grasa): sin penalización", () => {
+    const perfil = perfilBase({
+      dieta: ketoOn,
+      toleranciaPicante: "alto",
+      estadoActual: "Chiapas",
+    });
+    const v = varianteBase({
+      ingredientes: ["aguacate", "queso", "carne asada"],
+      nivelPicante: "bajo",
+      riesgoDigestivo: "bajo",
+    });
+    const r = calcularMatchScore(perfil, v, platilloBase({ estadoTipico: "Nayarit" }));
+    expect(r.score).toBe(100);
+  });
+
+  it("keto heavy gana sobre medium cuando ambos presentes", () => {
+    const perfil = perfilBase({
+      dieta: ketoOn,
+      toleranciaPicante: "alto",
+      estadoActual: "Chiapas",
+    });
+    const v = varianteBase({
+      ingredientes: ["tortilla", "frijol", "queso"],
+      nivelPicante: "bajo",
+      riesgoDigestivo: "bajo",
+    });
+    const r = calcularMatchScore(perfil, v, platilloBase({ estadoTipico: "Nayarit" }));
+    // Solo se aplica el heavy, no doble penalización
+    expect(r.score).toBe(80);
+  });
+});

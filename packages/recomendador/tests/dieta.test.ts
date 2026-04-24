@@ -4,33 +4,33 @@ import { varianteBase, variantePescado, varianteVegana, varianteVegetariana } fr
 
 describe("dietaEfectiva (precedencia)", () => {
   it("vegano gana sobre todos", () => {
-    expect(dietaEfectiva({ vegano: true, pescetariano: true, vegetariano: true })).toBe("vegano");
+    expect(dietaEfectiva({ vegano: true, pescetariano: true, vegetariano: true, keto: false })).toBe("vegano");
   });
 
   it("pescetariano gana sobre vegetariano cuando ambos son true (contrato §1.2)", () => {
-    expect(dietaEfectiva({ vegano: false, pescetariano: true, vegetariano: true })).toBe(
+    expect(dietaEfectiva({ vegano: false, pescetariano: true, vegetariano: true, keto: false })).toBe(
       "pescetariano",
     );
   });
 
   it("vegetariano solo si no hay vegano ni pescetariano", () => {
-    expect(dietaEfectiva({ vegano: false, pescetariano: false, vegetariano: true })).toBe(
+    expect(dietaEfectiva({ vegano: false, pescetariano: false, vegetariano: true, keto: false })).toBe(
       "vegetariano",
     );
   });
 
   it("omnivoro cuando todo está en false", () => {
-    expect(dietaEfectiva({ vegano: false, pescetariano: false, vegetariano: false })).toBe(
+    expect(dietaEfectiva({ vegano: false, pescetariano: false, vegetariano: false, keto: false })).toBe(
       "omnivoro",
     );
   });
 });
 
 describe("cumpleDieta", () => {
-  const dVegano = { vegano: true, pescetariano: false, vegetariano: false };
-  const dVege = { vegano: false, pescetariano: false, vegetariano: true };
-  const dPesc = { vegano: false, pescetariano: true, vegetariano: false };
-  const dOmni = { vegano: false, pescetariano: false, vegetariano: false };
+  const dVegano = { vegano: true, pescetariano: false, vegetariano: false, keto: false };
+  const dVege = { vegano: false, pescetariano: false, vegetariano: true, keto: false };
+  const dPesc = { vegano: false, pescetariano: true, vegetariano: false, keto: false };
+  const dOmni = { vegano: false, pescetariano: false, vegetariano: false, keto: false };
 
   describe("vegano", () => {
     it("permite variante apta vegano", () => {
